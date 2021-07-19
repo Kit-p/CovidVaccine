@@ -72,7 +72,7 @@ async function onLoad() {
     if (!res.ok) throw new Error(`Http Error with status {${res.status}: ${res.statusText}}`);
     const data = res.json();
 
-    let res = await fetch("https://booking.covidvaccine.gov.hk/forms/centre_data");
+    res = await fetch("https://booking.covidvaccine.gov.hk/forms/centre_data");
     if (!res.ok) throw new Error(`Http Error with status {${res.status}: ${res.statusText}}`);
     const result = await res.json();
 
