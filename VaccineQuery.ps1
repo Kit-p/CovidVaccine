@@ -39,13 +39,14 @@ function Get-VaccineTimeSlots {
         [string]$cv_name
     );
     $response = Get-VaccineTimeslotData -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name;
-    $result = ($response.avalible_timeslots | Where-Object date -le $dateLimit | ForEach-Object { ($_.timeslots | Where-Object value -eq 1 | ForEach-Object { $_.datetime }) } | Where-Object { $_.Count -gt 0 });
-    if ($result.Count -le 0) {
-        return "No available timeslots for the selected center before the date limit!";
+    $result = @();
+    foreach ($item in $response.avalible_timeslots) {
+        $item.timeslots = ($item.timeslots | Where-Object value -gt 0 | ForEach-Object { $_.display_label }) -join ", ";
+        if ($item.timeslots.Length -gt 0) {
+            $result += $item;
+        }
     }
-    else {
-        return $result;
-    }
+    return $result;
 }
 
 function Get-VaccineCenters {
@@ -153,7 +154,7 @@ function Get-VaccineQuery {
     Write-Host "Vaccine type: $($cv_name)";
     Write-Host "District: $($district)";
     Write-Host "Center: $($center)";
-    Get-VaccineTimeSlots -dateLimit "9999-99-99" -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name;
+    Get-VaccineTimeSlots -dateLimit "9999-99-99" -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name | Format-Table -AutoSize -Wrap -RepeatHeader;
     $ProgressPreference = "Continue";
 }
 
