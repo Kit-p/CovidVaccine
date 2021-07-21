@@ -41,7 +41,7 @@ function Get-VaccineTimeSlots {
     $response = Get-VaccineTimeslotData -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name;
     $result = @();
     foreach ($item in $response.avalible_timeslots) {
-        $item.timeslots = ($item.timeslots | Where-Object value -gt 0 | ForEach-Object { $_.display_label }) -join ", ";
+        $item.timeslots = ($item.timeslots | Where-Object value -gt 0 | ForEach-Object { $_.display_label }) -join " ";
         if ($item.timeslots.Length -gt 0) {
             $result += $item;
         }
@@ -100,11 +100,11 @@ function Get-VaccineQuery {
     Clear-Host;
     $title = "========================Covid Vaccine Query========================";
     Write-Host $title;
-    Write-Host "Choose a vaccine type (1/2):";
-    Write-Host "  1: Sinovac";
-    Write-Host "  2: BioNTech/Fosun";
+    Write-Host "`nChoose a vaccine type:";
+    Write-Host "`t1: Sinovac";
+    Write-Host "`t2: BioNTech/Fosun";
     do {
-        $cv_name = Read-Host "Enter 1 or 2";
+        $cv_name = Read-Host "`nEnter a number (1-2)";
         switch ($cv_name) {
             '1' {
                 $cv_name = "Sinovac";
@@ -117,15 +117,15 @@ function Get-VaccineQuery {
 
     Clear-Host;
     Write-Host $title;
-    Write-Host "Vaccine type: $($cv_name)";
-    Write-Host "Choose a district:";
+    Write-Host "Vaccine type:`t$($cv_name)";
+    Write-Host "`nChoose a district:";
     $center_list = Get-VaccineCenters -cv_name $cv_name;
     $districts = $center_list.districts;
     for ($i = 0; $i -lt $districts.Count; $i++) {
-        Write-Host "  $($i + 1): $($districts[$i].name)";
+        Write-Host "`t$($i + 1): $($districts[$i].name)";
     }
     do {
-        $option = Read-Host "Enter a number (1-$($districts.Count))";
+        $option = Read-Host "`nEnter a number (1-$($districts.Count))";
         $district = 0;
         $success = [int]::TryParse($option, [ref]$district);
     } while (($success -ne $true -or $district -lt 1 -or $district -gt $districts.Count));
@@ -133,15 +133,15 @@ function Get-VaccineQuery {
 
     Clear-Host;
     Write-Host $title;
-    Write-Host "Vaccine type: $($cv_name)";
-    Write-Host "District: $($district)";
-    Write-Host "Choose a center:";
+    Write-Host "Vaccine type:`t$($cv_name)";
+    Write-Host "    District:`t$($district)";
+    Write-Host "`nChoose a center:";
     $centers = ($center_list.districts | Where-Object name -ceq $district).centers;
     for ($i = 0; $i -lt $centers.Count; $i++) {
-        Write-Host "  $($i + 1): $($centers[$i].name)";
+        Write-Host "`t$($i + 1): $($centers[$i].name)";
     }
     do {
-        $option = Read-Host "Enter a number (1-$($centers.Count))";
+        $option = Read-Host "`nEnter a number (1-$($centers.Count))";
         $center_id = 0;
         $success = [int]::TryParse($option, [ref]$center_id);
     } while (($success -ne $true -or $center_id -lt 1 -or $center_id -gt $centers.Count));
@@ -151,9 +151,9 @@ function Get-VaccineQuery {
 
     Clear-Host;
     Write-Host $title;
-    Write-Host "Vaccine type: $($cv_name)";
-    Write-Host "District: $($district)";
-    Write-Host "Center: $($center)";
+    Write-Host "Vaccine type:`t$($cv_name)";
+    Write-Host "    District:`t$($district)";
+    Write-Host "      Center:`t$($center)`n";
     Get-VaccineTimeSlots -dateLimit "9999-99-99" -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name | Format-Table -AutoSize -Wrap -RepeatHeader;
     $ProgressPreference = "Continue";
 }
