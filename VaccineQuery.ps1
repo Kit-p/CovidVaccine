@@ -8,7 +8,8 @@
         [string]$cv_ctc_type,
         [Parameter(Mandatory)]
         [ValidateSet("Sinovac", "BioNTech/Fosun")]
-        [string]$cv_name
+        [string]$cv_name,
+        [string]$first_dose_date = $null
     );
     $header = @{
         "Content-Type" = "application/x-www-form-urlencoded; charset=UTF-8";
@@ -17,10 +18,14 @@
         "Referer"      = "https://booking.covidvaccine.gov.hk";
     };
     $body = @{
-        "center_id"   = $center_id;
-        "cv_ctc_type" = $cv_ctc_type;
-        "cv_name"     = $cv_name;
+        "center_id"       = $center_id;
+        "cv_ctc_type"     = $cv_ctc_type;
+        "cv_name"         = $cv_name;
+        "first_dose_date" = $first_dose_date;
     };
+    if ($null -eq $first_dose_date -or $first_dose_date -notmatch "^[0-9]{4}-[0-9]{2}-[0-9]{2}$") {
+        $body.Remove("first_dose_date");
+    }
     return (Invoke-WebRequest -UseBasicParsing -Uri "https://bookingform.covidvaccine.gov.hk/forms/api_center" -Method "Post" -Headers $header -Body $body | ConvertFrom-Json);
 }
 
@@ -36,9 +41,10 @@ function Get-VaccineTimeSlots {
         [string]$cv_ctc_type,
         [Parameter(Mandatory)]
         [ValidateSet("Sinovac", "BioNTech/Fosun")]
-        [string]$cv_name
+        [string]$cv_name,
+        [string]$first_dose_date = $null
     );
-    $response = Get-VaccineTimeslotData -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name;
+    $response = Get-VaccineTimeslotData -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name -first_dose_date $first_dose_date;
     $result = @();
     foreach ($item in $response.avalible_timeslots) {
         $item.timeslots = ($item.timeslots | Where-Object value -gt 0 | ForEach-Object { $_.display_label }) -join " ";
@@ -46,7 +52,12 @@ function Get-VaccineTimeSlots {
             $result += $item;
         }
     }
-    return $result;
+    if ($result.Count -le 0) {
+        return "No available timeslots available for the specified center!";
+    }
+    else {
+        return $result;
+    }
 }
 
 function Get-VaccineCenters {
@@ -153,9 +164,41 @@ function Get-VaccineQuery {
     Write-Host $title;
     Write-Host "Vaccine type:`t$($cv_name)";
     Write-Host "    District:`t$($district)";
-    Write-Host "      Center:`t$($center)`n";
-    Get-VaccineTimeSlots -dateLimit "9999-99-99" -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name | Format-Table -AutoSize -Wrap -RepeatHeader;
+    Write-Host "      Center:`t$($center)";
+    do {
+        $first_dose_date = Read-Host "`nEnter the first dose date in YYYY-MM-DD format:`n`t(Note: leave empty if not applicable)";
+        if ($first_dose_date.Length -le 0) {
+            $first_dose_date = $null;
+        }
+        else {
+            $date = Get-Date;
+            $success = [System.Datetime]::TryParseExact($first_dose_date, "yyyy-MM-dd", [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$date);
+            if ($true -eq $success) {
+                if ($cv_name -eq "Sinovac") {
+                    $first_dose_date = $date.AddDays(27).toString("yyyy-MM-dd");
+                }
+                elseif ($cv_name -eq "BioNTech/Fosun") {
+                    $first_dose_date = $date.AddDays(20).toString("yyyy-MM-dd");
+                }
+            }
+        }
+    } while (($null -ne $first_dose_date) -and ($true -ne $success));
+
+    Clear-Host;
+    Write-Host $title;
+    Write-Host "Vaccine type:`t$($cv_name)";
+    Write-Host "    District:`t$($district)";
+    Write-Host "      Center:`t$($center)";
+    if ($null -eq $first_dose_date) {
+        Write-Host "        Dose:`t1st";
+    }
+    else {
+        Write-Host "        Dose:`t2nd";
+    }
+
+    Get-VaccineTimeSlots -dateLimit "9999-99-99" -center_id $center_id -cv_ctc_type $cv_ctc_type -cv_name $cv_name  -first_dose_date $first_dose_date | Format-Table -AutoSize -Wrap -RepeatHeader;
     $ProgressPreference = "Continue";
 }
 
-Get-VaccineQuery
+Get-VaccineQuery;
+cmd /c pause;
